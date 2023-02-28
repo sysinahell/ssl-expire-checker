@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Telegram bot configuration
+TELEGRAM_BOT_TOKEN="BOT_TOKEN"
+TELEGRAM_CHAT_ID="CHAT_ID"
+
+# Function to get the number of days until a certificate expires
+function get_days_until_expiry() {
+  domain=$1
+  port=$2
+  expires_in=$(echo | openssl s_client -servername $domain -connect $domain:$port 2>/dev/null | openssl x509 -noout -enddate | cut -d "=" -f 2)
+
+  expires_on=$(date -d "$expires_in" '+%Y-%m-%d %H-%M')
+  now=$(date '+%s')
+  expires=$(date -d "$expires_in" '+%s')
+  days_until_expiry=$(( (expires - now) / 86400 ))
+
+  echo "$days_until_expiry day(s) | $expires_on"
+}
+
+# Read the list of domains and ports from a file
+results=""
+while read line; do
+  domain=$(echo $line | cut -d ' ' -f 1)
+  port=$(echo $line | cut -d ' ' -f 2)
+  # Get the number of days until the certificate expires
+  result="$(get_days_until_expiry $domain $port)"
+
+  # Write the result to a file
+  timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
+  result_file="$timestamp-$domain.txt"
+  echo "$(date) $domain: $result" >> results.txt
+
+  # Append the result to the message to send
+  results="$results📜 $domain SSL expire after $result%0A"
+
+done < domains.txt
+
+# Send the result to Telegram
+message=${results}
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$message"
