@@ -23,9 +23,9 @@ function add_emoji() {
   days_until_expiry=$1
 
   if [ $days_until_expiry -gt 40 ]; then
-    echo " "
+    echo "🟢"
   elif [ $days_until_expiry -lt 40 ] && [ $days_until_expiry -ge 15 ]; then
-    echo " "
+    echo "🟡"
   else
     echo "🔴"
   fi
