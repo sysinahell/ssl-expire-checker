@@ -18,24 +18,44 @@ function get_days_until_expiry() {
   echo "$days_until_expiry day(s) | $expires_on"
 }
 
+# Function to add an emoji based on the number of days until expiry
+function add_emoji() {
+  days_until_expiry=$1
+
+  if [ $days_until_expiry -gt 40 ]; then
+    echo " "
+  elif [ $days_until_expiry -lt 40 ] && [ $days_until_expiry -ge 15 ]; then
+    echo " "
+  else
+    echo "🔴"
+  fi
+}
+
 # Read the list of domains and ports from a file
-results=""
+results="<pre>----------SSL Expire Check----------%0A%0A"
+results+="🚦  Domain | Expires in | Expiry Date%0A%0A"
 while read line; do
   domain=$(echo $line | cut -d ' ' -f 1)
   port=$(echo $line | cut -d ' ' -f 2)
   # Get the number of days until the certificate expires
   result="$(get_days_until_expiry $domain $port)"
+  days_until_expiry=$(echo $result | cut -d ' ' -f 1)
+
+  # Add an emoji based on the number of days until expiry
+  emoji=$(add_emoji $days_until_expiry)
 
   # Write the result to a file
-  timestamp=$(date '+%Y-%m-%d_%H-%M-%S')
+  timestamp=$(date '+%y:%m:%d_%H:%M:%S')
   result_file="$timestamp-$domain.txt"
-  echo "$(date) $domain: $result" >> results.txt
+  echo "$(date) $domain: $emoji $result" >> results.txt
 
   # Append the result to the message to send
-  results="$results📜 $domain SSL expire after $result%0A"
+  results+="$emoji  $domain | $days_until_expiry day(s) |$(echo $result | cut -d '|' -f 2) %0A%0A"
 
 done < domains.txt
 
+results+="</pre>"
+
 # Send the result to Telegram
 message=${results}
-curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "text=$message"
+curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" -d "parse_mode=HTML" -d "text=$mes>
